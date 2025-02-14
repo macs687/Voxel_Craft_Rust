@@ -2,19 +2,17 @@ use settings::*;
 use math::*;
 
 use window::{Window, Events, Camera};
-use voxels::*;
-use loaders::load_texture;
-use graphics::{load_shader};
-use graphics::VoxelRenderer;
+use graphics::{load_shader, VoxelRenderer};
+use loaders::{load_texture};
+use voxels::{Chunk};
 
+
+mod window;
+mod graphics;
+mod loaders;
+mod voxels;
 mod settings;
 mod math;
-mod window;
-mod voxels;
-mod loaders;
-mod graphics;
-mod lighting;
-
 
 const VERTICES: [f32; 30] = [
     -1.0f32, -1.0f32, 0.0f32, 0.0f32, 0.0f32,
@@ -25,7 +23,6 @@ const VERTICES: [f32; 30] = [
     1.0f32, 1.0f32, 0.0f32, 1.0f32, 1.0f32,
     -1.0f32, 1.0f32, 0.0f32, 0.0f32, 1.0f32,
 ];
-
 
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
@@ -45,7 +42,6 @@ fn main() {
 
     let texture = load_texture("res/block.png").expect("Failed to load texture");
 
-
     let mut renderer = VoxelRenderer::new(1024*1024*8);
 
     let chunk = Chunk::new();
@@ -58,10 +54,7 @@ fn main() {
 
     let mut camera = Camera::init(Vec3::new(0.0, 0.0, 1.0), 70.0_f32.to_radians());
 
-    let mut model = Mat4::IDENTITY;
-    //model = Mat4::from_scale(glam::vec3(2.0f32, 2.0f32, 2.0f32));
-    //model = Mat4::from_translation(vec3(1.0f32, 1.0f32, 1.0f32));
-
+    let model = Mat4::IDENTITY;
 
     let mut last_time = window.glfw.get_time();
     let mut _delta:f64 = 0.0;
@@ -76,19 +69,19 @@ fn main() {
         _delta = current_time - last_time;
         last_time = current_time;
 
-        if events.j_pressed(ESCAPE) {
+        if events.jpressed(ESCAPE) {
             window.close();
         }
 
-        if events.j_clicked(LCM){
+        if events.jclicked(LCM){
             window.clear_color(0.0, 0.0, 0.0, 0.0);
         }
 
-        if events.j_clicked(PCM){
+        if events.jclicked(PCM){
             window.clear_color(0.4, 0.8, 0.6, 0.5);
         }
 
-        if events.j_clicked(SCM){
+        if events.jclicked(SCM){
             window.clear_color(1.0, 1.0, 1.0, 0.5);
         }
 
@@ -116,7 +109,7 @@ fn main() {
             camera.position += camera.up * _delta as f32 * speed;
         }
 
-        if events.j_pressed(TAB){
+        if events.jpressed(TAB){
             window.window.set_cursor_mode(events.toggle_cursor());
         }
 
@@ -124,12 +117,12 @@ fn main() {
             cam_y += -events.delta_y / (window.height() as f32) * 2.0;
             cam_x += -events.delta_x / (window.height() as f32) * 2.0;
 
-            if cam_y < -90.0_f32.to_radians() {   // ????
-                cam_y = -90.0_f32.to_radians();
-            }
-            if cam_y > 89.0_f32.to_radians() {
-                cam_y = 89.0_f32.to_radians();
-            }
+             if cam_y < -90.0_f32.to_radians() {   // ????
+                 cam_y = -90.0_f32.to_radians();
+             }
+             if cam_y > 89.0_f32.to_radians() {
+                 cam_y = 89.0_f32.to_radians();
+             }
 
             camera.rotation = Quat::IDENTITY;
             camera.rotate(cam_y, cam_x, 0.0);

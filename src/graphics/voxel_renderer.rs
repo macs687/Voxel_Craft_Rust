@@ -1,4 +1,4 @@
-use crate::voxels::{ Chunk, Voxel, CHUNK_D, CHUNK_H, CHUNK_W };
+use crate::voxels::{ Chunk, voxel::Voxel, chunk::CHUNK_D, chunk::CHUNK_H, chunk::CHUNK_W };
 
 use super::mesh::Mesh;
 

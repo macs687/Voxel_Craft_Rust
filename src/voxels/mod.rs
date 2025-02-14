@@ -1,6 +1,4 @@
-mod voxel;
-mod chunk;
+pub mod voxel;
+pub mod chunk;
 
-
-pub use voxel::Voxel;
-pub use chunk::{Chunk, CHUNK_D, CHUNK_H, CHUNK_W, CHUNK_VOL};
+pub use chunk::Chunk;
