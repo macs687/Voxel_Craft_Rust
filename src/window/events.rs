@@ -1,6 +1,7 @@
 use super::{Window};
 use glfw::{Action};
 
+
 pub struct Events{
     keys: [bool;1032],
     frames: [u32;1032],
@@ -31,6 +32,7 @@ impl Events{
         }
     }
 
+
     pub fn setting(&mut self, window: &mut Window){
         window.window.set_key_polling(true);
         window.window.set_mouse_button_polling(true);
@@ -38,6 +40,7 @@ impl Events{
         window.window.set_cursor_enter_polling(true);
         window.window.set_size_polling(true);
     }
+
 
     fn set_key(&mut self, key: usize, action: Action) {
         match action {
@@ -53,6 +56,7 @@ impl Events{
         }
     }
 
+
     pub fn pressed(&self, keycode: i32) -> bool{
         let keycode = keycode as usize;
         if keycode >= 1032 {
@@ -61,7 +65,8 @@ impl Events{
         self.keys[keycode]
     }
 
-    pub fn jpressed(&self, keycode: i32) -> bool{
+
+    pub fn j_pressed(&self, keycode: i32) -> bool{
         let keycode = keycode as usize;
         if keycode >= 1032 {
             return false;
@@ -69,15 +74,18 @@ impl Events{
         self.keys[keycode] && self.frames[keycode] == self.current
     }
 
-    pub fn _clicked(&self, button: i32) -> bool {
+
+    pub fn clicked(&self, button: i32) -> bool {
         let button_index = (button + 1024) as usize;
         self.keys[button_index]
     }
 
-    pub fn jclicked(&self, button: i32) -> bool {
+
+    pub fn j_clicked(&self, button: i32) -> bool {
         let button_index = (button + 1024) as usize;
         self.keys[button_index] && self.frames[button_index] == self.current
     }
+
 
     pub fn toggle_cursor(&mut self) -> glfw::CursorMode{
         self.cursor_locked = !self.cursor_locked;
@@ -88,7 +96,9 @@ impl Events{
         }
     }
 
+
     pub fn pull_events(&mut self, window: &mut Window) {
+        window.poll_events();
         self.current += 1;
         self.delta_x = 0.0;
         self.delta_y = 0.0;
@@ -100,6 +110,7 @@ impl Events{
                         gl::Viewport(0, 0, w, h);
                     }
                 }
+
                 glfw::WindowEvent::CursorPos(xpos, ypos) => {
                     if self.cursor_started {
                         self.delta_x += (xpos - self.x) as f32;
@@ -110,6 +121,7 @@ impl Events{
                     self.x = xpos;
                     self.y = ypos;
                 }
+
                 glfw::WindowEvent::MouseButton(button, action, _) => {
                     let button_index = match button {
                         glfw::MouseButton::Button1 => 1024,
@@ -124,9 +136,11 @@ impl Events{
 
                     self.set_key(button_index, action);
                 }
+
                 glfw::WindowEvent::Key(key, _, action, _) => {
                     self.set_key(key as usize, action);
                 }
+
                 _ => {}
             }
         }
