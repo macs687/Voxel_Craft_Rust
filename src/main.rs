@@ -1,5 +1,6 @@
 use gl::LINES;
-use glfw::ffi::{KEY_0, KEY_1};
+use glfw::ffi::{KEY_0, KEY_1, KEY_F1};
+use glfw::Key::F1;
 use settings::*;
 use math::*;
 
@@ -7,8 +8,10 @@ use window::{Window, Events, Camera};
 use loaders::{load_texture};
 use graphics::{load_shader, VoxelRenderer};
 use voxels::{Chunk, Chunks};
+use crate::files::{read_binary_file, write_binary_file};
 use crate::graphics::mesh::Mesh;
-use crate::voxels::chunk::{CHUNK_D, CHUNK_H, CHUNK_W};
+use crate::voxels::{Block, Blocks};
+use crate::voxels::chunk::{CHUNK_D, CHUNK_H, CHUNK_VOL, CHUNK_W};
 
 mod settings;
 mod math;
@@ -16,7 +19,7 @@ mod window;
 mod loaders;
 mod graphics;
 mod voxels;
-
+mod files;
 
 const vertices: [f32; 8] = [
     -0.01f32, -0.01f32,
@@ -48,8 +51,44 @@ fn main() {
 
     let texture = load_texture("res/block.png").expect("Failed to load texture");
 
+    let mut blocks = Blocks::init();
 
-    let mut chunks = Chunks::new(5, 5, 5);
+    {
+        // AIR
+        let mut block = Block::new(0, 0);
+        block.draw_group = 1;
+        block.light_passing = true;
+        blocks.blocks[block.id as usize] = Some(block.clone());
+
+        // STONE
+        block = Block::new(1, 2);
+        blocks.blocks[block.id as usize] = Some(block.clone());
+
+        // GRASS
+        block = Block::new(2, 4);
+        block.texture_faces[2] = 2;
+        block.texture_faces[3] = 1;
+        blocks.blocks[block.id as usize] = Some(block.clone());
+
+        // LAMP
+        block = Block::new(3, 3);
+        block.emission[0] = 10;
+        block.emission[1] = 0;
+        block.emission[2] = 0;
+        blocks.blocks[block.id as usize] = Some(block.clone());
+
+        // GLASS
+        block = Block::new(4, 5);
+        block.draw_group = 2;
+        block.light_passing = true;
+        blocks.blocks[block.id as usize] = Some(block.clone());
+
+        // GLASS
+        block = Block::new(5, 6);
+        blocks.blocks[block.id as usize] = Some(block.clone());
+    }
+
+    let mut chunks = Chunks::new(5, 1, 5);
     let mut meshes = Vec::with_capacity(chunks.volume);
     let mut renderer = VoxelRenderer::new(1024*1024*8);
 
@@ -80,6 +119,10 @@ fn main() {
     let mut cam_x = 0.0;
     let mut cam_y = 0.0;
 
+    let mut buffer = vec![0u8; chunks.volume * CHUNK_VOL];
+    let _result = read_binary_file("res/worlds/world.bin", &mut buffer);
+    chunks.read(&buffer);
+
     while !window.should_close() {
         let current_time = window.glfw.get_time();
         _delta = current_time - last_time;
@@ -88,18 +131,6 @@ fn main() {
         if events.j_pressed(ESCAPE) {
             window.close();
         }
-
-        // if events.jclicked(LCM){
-        //     window.clear_color(0.0, 0.0, 0.0, 0.0);
-        // }
-        //
-        // if events.jclicked(PCM){
-        //     window.clear_color(0.4, 0.8, 0.6, 0.5);
-        // }
-        //
-        // if events.jclicked(SCM){
-        //     window.clear_color(1.0, 1.0, 1.0, 0.5);
-        // }
 
         if events.pressed(Q){
             camera.position.z += _delta as f32 * speed;
@@ -133,6 +164,13 @@ fn main() {
             if events.j_pressed(KEY_0 + i) {
                 choosen_block = i;
             }
+        }
+
+        if events.j_pressed(KEY_F1) {
+            let mut buffer = vec![0u8; chunks.volume * CHUNK_VOL];
+            chunks.write(&mut buffer);
+            let _result = write_binary_file("res/worlds/world.bin", &buffer);
+            println!("world saved in {} bytes", chunks.volume * CHUNK_VOL);
         }
 
         if events.cursor_locked {
