@@ -1,4 +1,5 @@
 use gl::LINES;
+use glfw::ffi::{KEY_0, KEY_1};
 use settings::*;
 use math::*;
 
@@ -74,6 +75,8 @@ fn main() {
 
     let speed:f32 = 5.0f32;
 
+    let mut choosen_block = 1;
+
     let mut cam_x = 0.0;
     let mut cam_y = 0.0;
 
@@ -126,6 +129,12 @@ fn main() {
             window.window.set_cursor_mode(events.toggle_cursor());
         }
 
+        for i in 0..7 {
+            if events.j_pressed(KEY_0 + i) {
+                choosen_block = i;
+            }
+        }
+
         if events.cursor_locked {
             cam_y += -events.delta_y / (window.height() as f32) * 2.0;
             cam_x += -events.delta_x / (window.height() as f32) * 2.0;
@@ -139,6 +148,35 @@ fn main() {
 
             camera.rotation = Quat::IDENTITY;
             camera.rotate(cam_y, cam_x, 0.0);
+        }
+
+        {
+            let mut end = Vec3::ZERO;
+            let mut norm = Vec3::ZERO;
+            let mut iend = Vec3::ZERO;
+
+            if
+            let Some(vox) = chunks.ray_cast(
+                camera.position,
+                camera.front,
+                10.0,
+                &mut end,
+                &mut norm,
+                &mut iend
+            )
+            {
+                if events.j_clicked(LCM) {
+                    chunks.set(iend.x as isize, iend.y as isize, iend.z as isize, 0);
+                }
+                if events.j_clicked(PCM) {
+                    chunks.set(
+                        (iend.x + norm.x) as isize,
+                        (iend.y + norm.y) as isize,
+                        (iend.z + norm.z) as isize,
+                        choosen_block
+                    );
+                }
+            }
         }
 
 
