@@ -134,7 +134,7 @@ impl Chunks {
         let lx = x - cx * (CHUNK_W as isize);
         let ly = y - cy * (CHUNK_H as isize);
         let lz = z - cz * (CHUNK_D as isize);
-        println!("id: {}, id: {}", id, id as u8);
+        //println!("id: {}, id: {}", id, id as u8);
         chunk.voxels[((ly * (CHUNK_D as isize) + lz) * (CHUNK_W as isize) + lx) as usize].id = id as u8;
         chunk.modified = true;
 

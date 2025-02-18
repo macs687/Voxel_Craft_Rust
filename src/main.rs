@@ -5,13 +5,14 @@ use settings::*;
 use math::*;
 
 use window::{Window, Events, Camera};
-use loaders::{load_texture};
-use graphics::{load_shader, VoxelRenderer};
+use graphics::{VoxelRenderer};
 use voxels::{Chunk, Chunks};
+use crate::assets::Assets;
 use crate::files::{read_binary_file, write_binary_file};
 use crate::graphics::mesh::Mesh;
 use crate::voxels::{Block, Blocks};
 use crate::voxels::chunk::{CHUNK_D, CHUNK_H, CHUNK_VOL, CHUNK_W};
+
 
 mod settings;
 mod math;
@@ -20,8 +21,9 @@ mod loaders;
 mod graphics;
 mod voxels;
 mod files;
+mod assets;
 
-const vertices: [f32; 8] = [
+const VERTICES: [f32; 8] = [
     -0.01f32, -0.01f32,
     0.01f32, 0.01f32,
 
@@ -43,13 +45,9 @@ fn main() {
 
     events.setting(&mut window);
 
-    let shader = load_shader("res/main.glslv","res/main.glslf").expect("Failed to load main shader");
+    let mut assets = Assets::init().expect("fail load assets");
 
-    let crosshair_shader = load_shader("res/crosshair.glslv","res/crosshair.glslf").expect("Failed to load crosshair shader");
 
-    let lines_shader = load_shader("res/lines.glslv","res/lines.glslf").expect("Failed to load lines shader");
-
-    let texture = load_texture("res/block.png").expect("Failed to load texture");
 
     let mut blocks = Blocks::init();
 
@@ -103,9 +101,9 @@ fn main() {
 
     window.setting_gl();
 
-    let mut crosshair = Mesh::new(vertices.as_ptr(), 4, attrs.as_ptr());
+    let mut crosshair = Mesh::new(VERTICES.as_ptr(), 4, attrs.as_ptr());
 
-    let mut camera = Camera::init(Vec3::new(0.0, 0.0, 1.0), 70.0_f32.to_radians());
+    let mut camera = Camera::init(Vec3::new(10.0, 5.0, 10.0), 70.0_f32.to_radians());
 
     let model = Mat4::IDENTITY;
 
@@ -259,9 +257,9 @@ fn main() {
 
         window.gl_clear();
 
-        shader.use_shader();
-        shader.uniform_matrix("preview", camera.get_projection(window.width() as f32, window.height() as f32) * camera.get_view());
-        texture.bind();
+        assets.shader.use_shader();
+        assets.shader.uniform_matrix("preview", camera.get_projection(window.width() as f32, window.height() as f32) * camera.get_view());
+        assets.texture.bind();
 
         let mut model = Mat4::IDENTITY;
         model *= Mat4::from_translation(vec3(0.5, 0.0, 0.0));
@@ -278,13 +276,13 @@ fn main() {
                             ((chunk.z * CHUNK_D) as f32) + 0.5
                         )
                     );
-            shader.uniform_matrix("model", model);
+            assets.shader.uniform_matrix("model", model);
             mesh.draw(TRIANGLES);
 
         }
 
 
-        crosshair_shader.use_shader();
+        assets.crosshair_shader.use_shader();
         crosshair.draw(LINES);
 
 

@@ -5,4 +5,5 @@ pub mod mesh;
 
 pub use shader::load_shader;
 pub use texture::Texture;
+pub use shader::Shader;
 pub use voxel_renderer::VoxelRenderer;
