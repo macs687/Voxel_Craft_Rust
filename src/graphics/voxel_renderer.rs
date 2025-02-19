@@ -33,7 +33,7 @@ fn is_chunk(x: isize, y: isize, z: isize, chunks: &[Option<Chunk>]) -> bool {
 }
 
 fn get_chunk(x: isize, y: isize, z: isize, chunks: &[Option<Chunk>]) -> Option<&Chunk> {
-    let index = ((cdiv(y, CHUNK_H as isize) + 1) * 3 + cdiv(z, CHUNK_D as isize) + 1) * 3 + cdiv(x, CHUNK_W as isize) + 1;
+    let index = ((cdiv(y, CHUNK_H) + 1) * 3 + cdiv(z, CHUNK_D) + 1) * 3 + cdiv(x, CHUNK_W) + 1;
     if index >= 0 && index < chunks.len() as isize {
         chunks[index as usize].as_ref()
     } else {
@@ -43,9 +43,9 @@ fn get_chunk(x: isize, y: isize, z: isize, chunks: &[Option<Chunk>]) -> Option<&
 
 fn voxel(x: isize, y: isize, z: isize, chunks: &[Option<Chunk>]) -> Option<&Voxel> {
     if let Some(chunk) = get_chunk(x, y, z, chunks) {
-        let lx = local(x, CHUNK_W as isize) as usize;
-        let ly = local(y, CHUNK_H as isize) as usize;
-        let lz = local(z, CHUNK_D as isize) as usize;
+        let lx = local(x, CHUNK_W) as usize;
+        let ly = local(y, CHUNK_H) as usize;
+        let lz = local(z, CHUNK_D) as usize;
         Some(&chunk.voxels[(ly * CHUNK_D as usize + lz) * CHUNK_W as usize + lx])
     } else {
         None
@@ -103,7 +103,7 @@ impl VoxelRenderer {
                     let v = 1.0 - ((1 + id / 16) as f32) * uvsize;
 
                     let mut l;
-                    let (x, y, z) = (x as isize, y as isize, z as isize);
+                    let (x, y, z) = (x, y, z);
 
                     if !is_blocked(x , y  + 1, z , &chunks) {
                         l = 1.0;

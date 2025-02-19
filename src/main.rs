@@ -1,27 +1,25 @@
-use gl::LINES;
-use glfw::ffi::{KEY_0, KEY_1, KEY_F1};
-use glfw::Key::F1;
-use settings::*;
+use glfw::ffi::{KEY_0, KEY_F1};
 use math::*;
+use settings::*;
 
-use window::{Window, Events, Camera};
-use graphics::{VoxelRenderer};
-use voxels::{Chunk, Chunks};
-use crate::assets::Assets;
-use crate::files::{read_binary_file, write_binary_file};
+use crate::assets::{Assets, BlocksController};
+use crate::files::write_binary_file;
 use crate::graphics::mesh::Mesh;
-use crate::voxels::{Block, Blocks};
-use crate::voxels::chunk::{CHUNK_D, CHUNK_H, CHUNK_VOL, CHUNK_W};
-
+use crate::voxels::chunk::CHUNK_VOL;
+use crate::world_render::draw_world;
+use graphics::VoxelRenderer;
+use voxels::{Chunk, Chunks};
+use window::{Camera, Events, Window};
 
 mod settings;
-mod math;
 mod window;
 mod loaders;
 mod graphics;
 mod voxels;
 mod files;
 mod assets;
+mod math;
+mod world_render;
 
 const VERTICES: [f32; 8] = [
     -0.01f32, -0.01f32,
@@ -45,67 +43,46 @@ fn main() {
 
     events.setting(&mut window);
 
-    let mut assets = Assets::init().expect("fail load assets");
+    println!("start loading assets");
+    let assets = Assets::init().expect("fail load assets");
+    println!("loading assets: ok");
+
+    println!("start blocks init");
+    let mut blocks_controller = BlocksController::init().expect("Failed init blocks controller");
 
 
+    blocks_controller.setup_blocks();
+    println!("blocks init: ok");
 
-    let mut blocks = Blocks::init();
+    println!("start chunks init");
+    let mut chunks = Chunks::new(5, 2, 5);
+    println!("chunks init: ok");
 
-    {
-        // AIR
-        let mut block = Block::new(0, 0);
-        block.draw_group = 1;
-        block.light_passing = true;
-        blocks.blocks[block.id as usize] = Some(block.clone());
-
-        // STONE
-        block = Block::new(1, 2);
-        blocks.blocks[block.id as usize] = Some(block.clone());
-
-        // GRASS
-        block = Block::new(2, 4);
-        block.texture_faces[2] = 2;
-        block.texture_faces[3] = 1;
-        blocks.blocks[block.id as usize] = Some(block.clone());
-
-        // LAMP
-        block = Block::new(3, 3);
-        block.emission[0] = 10;
-        block.emission[1] = 0;
-        block.emission[2] = 0;
-        blocks.blocks[block.id as usize] = Some(block.clone());
-
-        // GLASS
-        block = Block::new(4, 5);
-        block.draw_group = 2;
-        block.light_passing = true;
-        blocks.blocks[block.id as usize] = Some(block.clone());
-
-        // GLASS
-        block = Block::new(5, 6);
-        blocks.blocks[block.id as usize] = Some(block.clone());
-    }
-
-    let mut chunks = Chunks::new(5, 1, 5);
+    println!("start meshes init");
     let mut meshes = Vec::with_capacity(chunks.volume);
+    println!("meshes init: ok");
+
+    println!("start renderer init");
     let mut renderer = VoxelRenderer::new(1024*1024*8);
 
 
     for i in 0..chunks.volume {
-        let mesh = renderer.render(&*chunks.chunks[i], &vec![]);
+        let mesh = renderer.render(&chunks.chunks[i], &vec![]);
         meshes.push(mesh);
     }
+    println!("renderer init: ok");
 
-
-    window.clear_color(1.0, 1.0, 1.0, 1.0);
+    window.clear_color(0.1, 0.2, 0.4, 0.8);
 
     window.setting_gl();
 
-    let mut crosshair = Mesh::new(VERTICES.as_ptr(), 4, attrs.as_ptr());
+    println!("start crosshair init");
+    let crosshair = Mesh::new(VERTICES.as_ptr(), 4, attrs.as_ptr());
+    println!("crosshair init: ok");
 
+    println!("start camera init");
     let mut camera = Camera::init(Vec3::new(10.0, 5.0, 10.0), 70.0_f32.to_radians());
-
-    let model = Mat4::IDENTITY;
+    println!("camera init: ok");
 
     let mut last_time = window.glfw.get_time();
     let mut _delta:f64 = 0.0;
@@ -117,10 +94,17 @@ fn main() {
     let mut cam_x = 0.0;
     let mut cam_y = 0.0;
 
-    let mut buffer = vec![0u8; chunks.volume * CHUNK_VOL];
-    let _result = read_binary_file("res/worlds/world.bin", &mut buffer);
-    chunks.read(&buffer);
+    // let mut buffer = vec![0u8; chunks.volume * CHUNK_VOL];
+    // let _result = read_binary_file("res/worlds/world.bin", &mut buffer);
+    // chunks.read(&buffer);
 
+    // println!("start lighting init");
+    // let mut lighting = Lighting::init();
+    //
+    // lighting.on_world_loaded(&blocks_controller.blocks, &mut chunks);
+    // println!("end lighting init");
+
+    println!("start main loop");
     while !window.should_close() {
         let current_time = window.glfw.get_time();
         _delta = current_time - last_time;
@@ -192,7 +176,7 @@ fn main() {
             let mut iend = Vec3::ZERO;
 
             if
-            let Some(vox) = chunks.ray_cast(
+            let Some(_vox) = chunks.ray_cast(
                 camera.position,
                 camera.front,
                 10.0,
@@ -204,6 +188,7 @@ fn main() {
                 if events.j_clicked(LCM) {
                     chunks.set(iend.x as isize, iend.y as isize, iend.z as isize, 0);
                 }
+
                 if events.j_clicked(PCM) {
                     chunks.set(
                         (iend.x + norm.x) as isize,
@@ -214,6 +199,8 @@ fn main() {
                 }
             }
         }
+
+        /// рендер
 
 
         let mut closes: Vec<Option<Chunk>> = vec![None; 27];
@@ -248,48 +235,21 @@ fn main() {
                 }
 
                 let index = ((oy + 1) * 3 + (oz + 1)) * 3 + (ox + 1);
-                closes[index as usize] = Some(*other.clone());
+                closes[index as usize] = Some(other.clone());
             }
 
-            let mesh = renderer.render(chunk.as_ref(), &closes);
+            let mesh = renderer.render(chunk, &closes);
             meshes[i] = mesh;
         }
 
-        window.gl_clear();
-
-        assets.shader.use_shader();
-        assets.shader.uniform_matrix("preview", camera.get_projection(window.width() as f32, window.height() as f32) * camera.get_view());
-        assets.texture.bind();
-
-        let mut model = Mat4::IDENTITY;
-        model *= Mat4::from_translation(vec3(0.5, 0.0, 0.0));
-
-        for i in 0..chunks.volume {
-            let chunk = &chunks.chunks[i];
-            let mesh = &meshes[i];
-            model =
-                Mat4::IDENTITY *
-                    Mat4::from_translation(
-                        vec3(
-                            ((chunk.x * CHUNK_W) as f32) + 0.5,
-                            ((chunk.y * CHUNK_H) as f32) + 0.5,
-                            ((chunk.z * CHUNK_D) as f32) + 0.5
-                        )
-                    );
-            assets.shader.uniform_matrix("model", model);
-            mesh.draw(TRIANGLES);
-
-        }
-
-
-        assets.crosshair_shader.use_shader();
-        crosshair.draw(LINES);
+        draw_world(&mut window, &assets, &camera, &chunks, &meshes, &crosshair);
 
 
         window.swap_buffers();
         window.poll_events();
         events.pull_events(&mut window);
     }
+    println!("end main loop");
 
     window.terminate();
 }

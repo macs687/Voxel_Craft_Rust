@@ -1,11 +1,10 @@
 extern crate gl;
+extern crate glfw;
 
 use gl::{DEPTH_BUFFER_BIT, DEPTH_TEST};
-use gl::types::*;
 
-extern crate glfw;
-use glfw::{Glfw, PWindow, GlfwReceiver, WindowEvent, fail_on_errors, Action, Context, Key};
-use glfw::ffi::{glfwTerminate};
+use glfw::ffi::glfwTerminate;
+use glfw::{fail_on_errors, Context, Glfw, GlfwReceiver, PWindow, WindowEvent};
 
 pub struct Window{
     pub glfw: Glfw,
