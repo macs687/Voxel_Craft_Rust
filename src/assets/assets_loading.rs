@@ -1,7 +1,6 @@
-use crate::graphics::{load_shader, Shader, Texture};
-use crate::loaders::load_texture;
 use std::io;
-
+use crate::graphics::{load_shader, Shader, Texture};
+use crate::loaders::png_loading::load_texture;
 
 pub struct Assets {
     pub shader: Shader,
@@ -33,4 +32,5 @@ impl Assets {
             texture
         })
     }
+
 }

@@ -1,5 +1,5 @@
 use gl::types::GLenum;
-use glfw::ffi::{KEY_A, KEY_D, KEY_E, KEY_ESCAPE, KEY_Q, KEY_S, KEY_TAB, KEY_W, MOUSE_BUTTON_LEFT, MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_RIGHT};
+use glfw::ffi::{KEY_0, KEY_A, KEY_D, KEY_E, KEY_ESCAPE, KEY_Q, KEY_S, KEY_TAB, KEY_W, MOUSE_BUTTON_LEFT, MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_RIGHT};
 use std::ffi::c_int;
 
 
@@ -21,3 +21,4 @@ pub const S: c_int = KEY_S;
 pub const D: c_int = KEY_D;
 pub const Q: c_int = KEY_Q;
 pub const E: c_int = KEY_E;
+pub const K_0: c_int = KEY_0;

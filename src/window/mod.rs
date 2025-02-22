@@ -1,5 +1,5 @@
 mod window;
-pub mod events;
+mod events;
 mod camera;
 
 

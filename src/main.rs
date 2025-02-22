@@ -1,207 +1,199 @@
-use glfw::ffi::{KEY_0, KEY_F1};
-use math::*;
 use settings::*;
+use math::*;
 
-use crate::assets::{Assets, BlocksController};
-use crate::files::write_binary_file;
-use crate::graphics::mesh::Mesh;
-use crate::voxels::chunk::CHUNK_VOL;
-use crate::world_render::draw_world;
-use graphics::VoxelRenderer;
-use voxels::{Chunk, Chunks};
-use window::{Camera, Events, Window};
+use window::{Window, Events, Camera};
+use assets::{Assets, BlocksController};
+use voxels::{Chunks, Chunk, CHUNK_VOL};
+use graphics::{VoxelRenderer, LineBatch, Mesh};
+use lighting::Lighting;
+use files::{read_binary_file, write_binary_file};
+use world::draw_world;
+
 
 mod settings;
-mod window;
-mod loaders;
-mod graphics;
-mod voxels;
-mod files;
-mod assets;
 mod math;
-mod world_render;
+mod window;
+mod assets;
+mod voxels;
+mod graphics;
+mod lighting;
+mod files;
+mod world;
+mod loaders;
 
-const VERTICES: [f32; 8] = [
-    -0.01f32, -0.01f32,
-    0.01f32, 0.01f32,
-
-    -0.01f32, 0.01f32,
-    0.01f32, -0.01f32
-];
 
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
-const TITLE: &str = "Voxel_Craft";
+
+const VERTICES: [f32; 8] = [
+    // x   | y
+    -0.01, -0.01, 0.01, 0.01,
+
+    -0.01, 0.01, 0.01, -0.01,
+];
 
 #[allow(non_upper_case_globals)]
-const attrs: [i32; 3] = [3, 2, 0];
-
+const attrs: [i32; 2] = [2, 0]; // null terminator
 
 fn main() {
-    let mut window = Window::init(WIDTH, HEIGHT, TITLE).unwrap();
-    let mut events = Events::init();
+    let mut window = Window::new(WIDTH, HEIGHT, "Window 2.0").unwrap();
+    let mut events = Events::new();
 
-    events.setting(&mut window);
+    events.initialize(&mut window);
 
-    println!("start loading assets");
-    let assets = Assets::init().expect("fail load assets");
-    println!("loading assets: ok");
+    let mut assets = Assets::init().expect("fail load assets");
+    println!("load assets: ok");
 
-    println!("start blocks init");
-    let mut blocks_controller = BlocksController::init().expect("Failed init blocks controller");
-
+    println!("start block init");
+    let mut blocks_controller = BlocksController::init().unwrap();
 
     blocks_controller.setup_blocks();
     println!("blocks init: ok");
 
     println!("start chunks init");
-    let mut chunks = Chunks::new(5, 2, 5);
+    let mut chunks = Chunks::new(4, 4, 4);
+    let mut meshes = Vec::with_capacity(chunks.volume);
+    for _ in 0..chunks.volume {
+        meshes.push(None);
+    }
     println!("chunks init: ok");
 
-    println!("start meshes init");
-    let mut meshes = Vec::with_capacity(chunks.volume);
-    println!("meshes init: ok");
-
-    println!("start renderer init");
-    let mut renderer = VoxelRenderer::new(1024*1024*8);
-
-
-    for i in 0..chunks.volume {
-        let mesh = renderer.render(&chunks.chunks[i], &vec![]);
-        meshes.push(mesh);
-    }
+    println!("start init renderer");
+    let mut renderer = VoxelRenderer::new(1024 * 1024 * 8);
+    let mut line_batch = LineBatch::new(4096);
     println!("renderer init: ok");
 
-    window.clear_color(0.1, 0.2, 0.4, 0.8);
+    window.gl_setting();
 
-    window.setting_gl();
-
-    println!("start crosshair init");
     let crosshair = Mesh::new(VERTICES.as_ptr(), 4, attrs.as_ptr());
     println!("crosshair init: ok");
 
-    println!("start camera init");
-    let mut camera = Camera::init(Vec3::new(10.0, 5.0, 10.0), 70.0_f32.to_radians());
+    let mut camera = Camera::new(Vec3::new(5.0, 5.0, 20.0), (70.0_f32).to_radians());
     println!("camera init: ok");
 
+    println!("start settings init");
     let mut last_time = window.glfw.get_time();
-    let mut _delta:f64 = 0.0;
-
-    let speed:f32 = 5.0f32;
-
-    let mut choosen_block = 1;
+    let mut _delta: f32 = 0.0;
 
     let mut cam_x = 0.0;
     let mut cam_y = 0.0;
 
-    // let mut buffer = vec![0u8; chunks.volume * CHUNK_VOL];
-    // let _result = read_binary_file("res/worlds/world.bin", &mut buffer);
-    // chunks.read(&buffer);
+    let speed = 15.0;
 
-    // println!("start lighting init");
-    // let mut lighting = Lighting::init();
-    //
-    // lighting.on_world_loaded(&blocks_controller.blocks, &mut chunks);
-    // println!("end lighting init");
+    let mut choosen_block: i32 = 1;
+    println!("settings init: ok");
+
+    println!("start lighting init");
+    let mut lighting = Lighting::new();
+
+    lighting.on_world_loaded(&blocks_controller.blocks, &mut chunks);
+    println!("lighting init: ok");
+
+    println!("start world loaded");
+    let mut buffer = vec![0u8; chunks.volume * CHUNK_VOL];
+    let _result = read_binary_file("res/worlds/world.bin", &mut buffer);
+    chunks.read(&buffer);
+
+    lighting.clear(&mut chunks);
+    lighting.on_world_loaded(&blocks_controller.blocks, &mut chunks);
+    println!("finish world loaded");
+
 
     println!("start main loop");
     while !window.should_close() {
         let current_time = window.glfw.get_time();
-        _delta = current_time - last_time;
+        _delta = (current_time - last_time) as f32;
         last_time = current_time;
 
-        if events.j_pressed(ESCAPE) {
+        if events.jpressed(ESCAPE) {
             window.close();
         }
 
-        if events.pressed(Q){
-            camera.position.z += _delta as f32 * speed;
-        }
-
-        if events.pressed(E){
-            camera.position.z -= _delta as f32 * speed;
-        }
-
-        if events.pressed(A){
-            camera.position -= camera.right * _delta as f32 * speed;
-        }
-
-        if events.pressed(D){
-            camera.position += camera.right * _delta as f32 * speed;
-        }
-
-        if events.pressed(S){
-            camera.position -= camera.up * _delta as f32 * speed;
-        }
-
-        if events.pressed(W){
-            camera.position += camera.up * _delta as f32 * speed;
-        }
-
-        if events.j_pressed(TAB){
+        if events.jpressed(TAB) {
             window.window.set_cursor_mode(events.toggle_cursor());
         }
 
-        for i in 0..7 {
-            if events.j_pressed(KEY_0 + i) {
+        for i in 0..5 {
+            if events.jpressed(K_0 + i) {
                 choosen_block = i;
             }
         }
 
-        if events.j_pressed(KEY_F1) {
-            let mut buffer = vec![0u8; chunks.volume * CHUNK_VOL];
-            chunks.write(&mut buffer);
-            let _result = write_binary_file("res/worlds/world.bin", &buffer);
-            println!("world saved in {} bytes", chunks.volume * CHUNK_VOL);
+        if events.pressed(W) {
+            camera.position += camera.front * _delta * speed;
+        }
+
+        if events.pressed(S) {
+            camera.position -= camera.front * _delta * speed;
+        }
+
+        if events.pressed(D) {
+            camera.position -= camera.right * _delta * speed;
+        }
+
+        if events.pressed(A) {
+            camera.position += camera.right * _delta * speed;
         }
 
         if events.cursor_locked {
-            cam_y += -events.delta_y / (window.height() as f32) * 2.0;
-            cam_x += -events.delta_x / (window.height() as f32) * 2.0;
+            cam_y -= (-events.delta_y / (window.height() as f32)) * 2.0;
+            cam_x += (-events.delta_x / (window.height() as f32)) * 2.0;
 
-            //    cam_y < -90.0_f32.to_radians() {   // ????
-            //      cam_y = -90.0_f32.to_radians();
-            // }
-            if cam_y > 89.0_f32.to_radians() {
-                cam_y = 89.0_f32.to_radians();
+            if cam_y < -(89.0_f32).to_radians() {
+                cam_y = -(89.0_f32).to_radians();
+            }
+            if cam_y > (89.0_f32).to_radians() {
+                cam_y = (89.0_f32).to_radians();
             }
 
             camera.rotation = Quat::IDENTITY;
             camera.rotate(cam_y, cam_x, 0.0);
         }
 
+        let mut end = glam::Vec3::default();
+        let mut norm = glam::Vec3::default();
+        let mut iend = glam::Vec3::default();
+
+        if let Some(_vox) = chunks.ray_cast(
+            camera.position,
+            camera.front,
+            10.0,
+            &mut end,
+            &mut norm,
+            &mut iend)
         {
-            let mut end = Vec3::ZERO;
-            let mut norm = Vec3::ZERO;
-            let mut iend = Vec3::ZERO;
+            line_batch.boxx(
+                iend.x + 0.5,
+                iend.y + 0.5,
+                iend.z + 0.5,
+                1.01,
+                1.01,
+                1.01,
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            );
 
-            if
-            let Some(_vox) = chunks.ray_cast(
-                camera.position,
-                camera.front,
-                10.0,
-                &mut end,
-                &mut norm,
-                &mut iend
-            )
-            {
-                if events.j_clicked(LCM) {
-                    chunks.set(iend.x as isize, iend.y as isize, iend.z as isize, 0);
-                }
+            if events.jclicked(LCM) && events.cursor_locked {
+                let x = iend.x as isize;
+                let y = iend.y as isize;
+                let z = iend.z as isize;
 
-                if events.j_clicked(PCM) {
-                    chunks.set(
-                        (iend.x + norm.x) as isize,
-                        (iend.y + norm.y) as isize,
-                        (iend.z + norm.z) as isize,
-                        choosen_block
-                    );
-                }
+                chunks.set(x, y, z, 0);
+
+                lighting.on_block_set(x, y, z, 0, &blocks_controller.blocks, &mut chunks);
+            }
+
+            if events.jclicked(PCM) && events.cursor_locked {
+                let x = (iend.x + norm.x) as isize;
+                let y = (iend.y + norm.y) as isize;
+                let z = (iend.z + norm.z) as isize;
+                chunks.set(x, y, z, choosen_block);
+
+                lighting.on_block_set(x, y, z, choosen_block as u8, &blocks_controller.blocks, &mut chunks);
             }
         }
-
-        /// рендер
-
 
         let mut closes: Vec<Option<Chunk>> = vec![None; 27];
 
@@ -214,10 +206,10 @@ fn main() {
             }
             let chunk = &chunks.chunks[i];
 
-            // if let Some(mesh) = meshes[i].take() {
-            //     // Освобождаем ресурсы меша
-            //     drop(mesh);
-            // }
+            if let Some(mesh) = meshes[i].take() {
+                // Освобождаем ресурсы меша
+                drop(mesh);
+            }
 
             // Инициализируем массив closes снова
             for elem in &mut closes {
@@ -238,18 +230,23 @@ fn main() {
                 closes[index as usize] = Some(other.clone());
             }
 
-            let mesh = renderer.render(chunk, &closes);
-            meshes[i] = mesh;
+            let mesh = renderer.render(chunk, &closes, &blocks_controller.blocks);
+            meshes[i] = Some(mesh);
         }
 
-        draw_world(&mut window, &assets, &camera, &chunks, &meshes, &crosshair);
 
+        draw_world(&assets, &camera, &window, &chunks, &meshes, &crosshair, &mut line_batch);
 
         window.swap_buffers();
-        window.poll_events();
         events.pull_events(&mut window);
     }
-    println!("end main loop");
+    println!("finish main loop");
+
+    println!("saving world");
+    let mut buffer = vec![0u8; chunks.volume * CHUNK_VOL];
+    chunks.write(&mut buffer);
+    let _result = write_binary_file("res/worlds/world.bin", &buffer);
+    println!("world saved in {} bytes on res/worlds/world.bin", chunks.volume * CHUNK_VOL, );
 
     window.terminate();
 }

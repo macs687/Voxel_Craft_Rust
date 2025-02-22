@@ -1,56 +1,35 @@
-extern crate gl;
-extern crate glfw;
-
-use gl::{DEPTH_BUFFER_BIT, DEPTH_TEST};
-
+use gl::DEPTH_TEST;
+use glfw::{fail_on_errors, Context, GlfwReceiver, WindowEvent};
 use glfw::ffi::glfwTerminate;
-use glfw::{fail_on_errors, Context, Glfw, GlfwReceiver, PWindow, WindowEvent};
 
-pub struct Window{
-    pub glfw: Glfw,
-    pub window: PWindow,
-    pub receiver: GlfwReceiver<(f64, WindowEvent)>,
-
+pub struct Window {
+    pub glfw: glfw::Glfw,
+    pub window: glfw::PWindow,
+    pub receiver: GlfwReceiver<(f64, WindowEvent)>
 }
 
 
 impl Window {
-    /// инициализация окна
-    pub fn init(width: u32, height: u32, title: &str) -> Result<Self, String> {
-        let mut glfw = glfw::init(fail_on_errors!()).unwrap();
+    pub fn new(width: u32, height: u32, title: &str) -> Result<Self, String> {
+        let mut glfw = glfw
+        ::init(fail_on_errors!())
+            .map_err(|e| format!("GLFW initialization failed: {}", e))?;
 
         glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
         glfw.window_hint(glfw::WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core));
         glfw.window_hint(glfw::WindowHint::Resizable(true));
 
-        let (mut window, events) = match glfw.create_window(width, height, title, glfw::WindowMode::Windowed) {
-            Some((window, events)) => (window, events),
-            None => {
-                eprintln!("Failed to create GLFW window.");
-                std::process::exit(1);
-            }
-        };
-
+        let (mut window, events) = glfw
+            .create_window(width, height, title, glfw::WindowMode::Windowed)
+            .ok_or_else(|| String::from("Failed to create GLFW window"))?;
         window.make_current();
         gl::load_with(|s| window.get_proc_address(s) as *const _);
-        window.set_key_polling(true);
 
         unsafe {
             gl::Viewport(0, 0, width as i32, height as i32);
         }
 
-        Ok(Self {glfw, window, receiver: events})
-    }
-
-
-    /// освобождение всех ресурсов окна
-    pub fn terminate(&mut self) {
-        unsafe { glfwTerminate() }
-    }
-
-
-    pub fn swap_buffers(&mut self){
-        self.window.swap_buffers();
+        Ok(Self { glfw, window , receiver: events})
     }
 
 
@@ -59,25 +38,8 @@ impl Window {
     }
 
 
-    pub fn close(&mut self){
-        self.window.set_should_close(true);
-    }
-
-
-    pub fn poll_events(&mut self){
-        self.glfw.poll_events();
-    }
-
-
-    pub fn gl_clear(&mut self){
-        unsafe {
-            gl::Clear(gl::COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
-        }
-    }
-
-
-    pub fn clear_color(&mut self, red: f32, green: f32, blue: f32, alpha: f32){
-        unsafe { gl::ClearColor(red, green, blue, alpha) }
+    pub fn _get_size(&self) -> (i32, i32) {
+        self.window.get_size()
     }
 
 
@@ -91,12 +53,32 @@ impl Window {
     }
 
 
-    pub fn setting_gl(&self){
+    pub fn close(&mut self) {
         unsafe {
+            self.window.set_should_close(true);
+        }
+    }
+
+
+    pub fn swap_buffers(&mut self) {
+        self.window.swap_buffers();
+        self.glfw.poll_events();
+    }
+
+
+    pub fn terminate(&mut self) {
+        unsafe { glfwTerminate() }
+    }
+
+
+    pub fn gl_setting(&self) {
+        unsafe {
+            gl::ClearColor(0.0, 0.0, 0.0, 1.0);
             gl::Enable(DEPTH_TEST);
             gl::Enable(gl::CULL_FACE);
             gl::Enable(gl::BLEND);
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
         }
     }
+
 }

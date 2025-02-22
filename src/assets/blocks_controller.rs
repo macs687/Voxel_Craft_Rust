@@ -1,14 +1,14 @@
 use std::io;
-use crate::voxels::{Block, Blocks};
+use crate::voxels::{Block, BlockRegistry};
 
 pub struct BlocksController {
-    pub blocks: Blocks
+    pub blocks: BlockRegistry
 }
 
 
 impl BlocksController {
     pub fn init() -> Result<Self, io::Error> {
-        let mut blocks = Blocks::init();
+        let mut blocks = BlockRegistry::new();
 
         Ok(Self{
             blocks
@@ -34,9 +34,9 @@ impl BlocksController {
 
         // LAMP
         block = Block::new(3, 3);
-        block.emission[0] = 10;
-        block.emission[1] = 0;
-        block.emission[2] = 0;
+        block.emission[0] = 11;
+        block.emission[1] = 11;
+        block.emission[2] = 6;
         self.blocks.blocks[block.id as usize] = Some(block.clone());
 
         // GLASS

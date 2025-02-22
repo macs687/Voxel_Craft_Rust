@@ -1,8 +1,6 @@
-use super::{Window};
-use glfw::{Action};
+use super::Window;
 
-
-pub struct Events{
+pub struct Events {
     keys: [bool;1032],
     frames: [u32;1032],
     current: u32,
@@ -11,15 +9,14 @@ pub struct Events{
     x: f64,
     y: f64,
     pub cursor_locked: bool,
-    cursor_started: bool
+    cursor_started: bool,
 }
 
-
-impl Events{
-    pub fn init() -> Self{
+impl Events {
+    pub fn new() -> Self {
         let keys = [false; 1032];
         let frames = [0; 1032];
-        Self{
+        Self {
             keys,
             frames,
             current: 0,
@@ -28,12 +25,11 @@ impl Events{
             x: 0.0,
             y: 0.0,
             cursor_locked: false,
-            cursor_started: false
+            cursor_started: false,
         }
     }
 
-
-    pub fn setting(&mut self, window: &mut Window){
+    pub fn initialize(&mut self, window: &mut Window) {
         window.window.set_key_polling(true);
         window.window.set_mouse_button_polling(true);
         window.window.set_cursor_pos_polling(true);
@@ -41,64 +37,7 @@ impl Events{
         window.window.set_size_polling(true);
     }
 
-
-    fn set_key(&mut self, key: usize, action: Action) {
-        match action {
-            Action::Press => {
-                self.keys[key] = true;
-                self.frames[key] = self.current;
-            }
-            Action::Release => {
-                self.keys[key] = false;
-                self.frames[key] = self.current;
-            }
-            _ => {}
-        }
-    }
-
-
-    pub fn pressed(&self, keycode: i32) -> bool{
-        let keycode = keycode as usize;
-        if keycode >= 1032 {
-            return false;
-        }
-        self.keys[keycode]
-    }
-
-
-    pub fn j_pressed(&self, keycode: i32) -> bool{
-        let keycode = keycode as usize;
-        if keycode >= 1032 {
-            return false;
-        }
-        self.keys[keycode] && self.frames[keycode] == self.current
-    }
-
-
-    pub fn clicked(&self, button: i32) -> bool {
-        let button_index = (button + 1024) as usize;
-        self.keys[button_index]
-    }
-
-
-    pub fn j_clicked(&self, button: i32) -> bool {
-        let button_index = (button + 1024) as usize;
-        self.keys[button_index] && self.frames[button_index] == self.current
-    }
-
-
-    pub fn toggle_cursor(&mut self) -> glfw::CursorMode{
-        self.cursor_locked = !self.cursor_locked;
-        if self.cursor_locked {
-            glfw::CursorMode::Disabled
-        } else {
-            glfw::CursorMode::Normal
-        }
-    }
-
-
     pub fn pull_events(&mut self, window: &mut Window) {
-        window.poll_events();
         self.current += 1;
         self.delta_x = 0.0;
         self.delta_y = 0.0;
@@ -110,7 +49,6 @@ impl Events{
                         gl::Viewport(0, 0, w, h);
                     }
                 }
-
                 glfw::WindowEvent::CursorPos(xpos, ypos) => {
                     if self.cursor_started {
                         self.delta_x += (xpos - self.x) as f32;
@@ -121,7 +59,6 @@ impl Events{
                     self.x = xpos;
                     self.y = ypos;
                 }
-
                 glfw::WindowEvent::MouseButton(button, action, _) => {
                     let button_index = match button {
                         glfw::MouseButton::Button1 => 1024,
@@ -134,15 +71,68 @@ impl Events{
                         glfw::MouseButton::Button8 => 1031,
                     };
 
-                    self.set_key(button_index, action);
+                    match action {
+                        glfw::Action::Press => {
+                            self.keys[button_index] = true;
+                            self.frames[button_index] = self.current;
+                        }
+                        glfw::Action::Release => {
+                            self.keys[button_index] = false;
+                            self.frames[button_index] = self.current;
+                        }
+                        _ => {}
+                    }
                 }
-
                 glfw::WindowEvent::Key(key, _, action, _) => {
-                    self.set_key(key as usize, action);
+                    let key_index = key as usize;
+                    match action {
+                        glfw::Action::Press => {
+                            self.keys[key_index] = true;
+                            self.frames[key_index] = self.current;
+                        }
+                        glfw::Action::Release => {
+                            self.keys[key_index] = false;
+                            self.frames[key_index] = self.current;
+                        }
+                        _ => {}
+                    }
                 }
-
                 _ => {}
             }
         }
+    }
+
+    pub fn pressed(&self, keycode: i32) -> bool {
+        let keycode = keycode as usize;
+        if keycode >= 1032 {
+            return false;
+        }
+        self.keys[keycode]
+    }
+
+    pub fn jpressed(&self, keycode: i32) -> bool {
+        let keycode = keycode as usize;
+        if keycode >= 1032 {
+            return false;
+        }
+        self.keys[keycode] && self.frames[keycode] == self.current
+    }
+
+    pub fn _clicked(&self, button: i32) -> bool {
+        let button_index = (button + 1024) as usize;
+        self.keys[button_index]
+    }
+
+    pub fn jclicked(&self, button: i32) -> bool {
+        let button_index = (button + 1024) as usize;
+        self.keys[button_index] && self.frames[button_index] == self.current
+    }
+    pub fn toggle_cursor(&mut self) -> glfw::CursorMode{
+            self.cursor_locked = !self.cursor_locked;
+            if self.cursor_locked {
+                glfw::CursorMode::Disabled
+            } else {
+                glfw::CursorMode::Normal
+            }
     }
 }
